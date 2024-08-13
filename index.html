@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,28 +14,35 @@
             padding: 20px;
             line-height: 1.6;
         }
-        h1, h2 {
+
+        h1,
+        h2 {
             color: #333;
         }
-        input, button {
+
+        input,
+        button {
             margin: 10px 0;
             padding: 5px;
         }
-        #rankingChart, #timeChart {
+
+        #rankingChart,
+        #timeChart {
             margin-top: 20px;
         }
     </style>
 </head>
+
 <body>
     <h1>채팅 분석 도구</h1>
-    
+
     <h2>채팅 로그 업로드</h2>
     <input type="file" id="fileInput" accept=".txt">
-    
+
     <h2>닉네임 분석</h2>
     <input type="text" id="nicknameInput" placeholder="닉네임 입력">
     <button onclick="analyzeNickname()">분석</button>
-    
+
     <div>
         <canvas id="rankingChart"></canvas>
     </div>
@@ -72,12 +80,14 @@
             const hourCounts = Array(24).fill(0);
             data.forEach(entry => {
                 if (entry.nickname === targetNickname) {
-                    let hour = parseInt(entry.time.split(':')[0]);
+                    let hour = 0;
                     if (entry.time.includes('오후') && hour !== 12) hour += 12;
                     if (entry.time.includes('오전') && hour === 12) hour = 0;
+                    hour += parseInt(entry.time.split(':')[0].replace("오전 ", "").replace("오후 ", ""));
                     hourCounts[hour]++;
                 }
             });
+            console.log(hourCounts);
             return hourCounts;
         }
 
@@ -128,7 +138,7 @@
             new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: Array.from({length: 24}, (_, i) => i),
+                    labels: Array.from({ length: 24 }, (_, i) => i),
                     datasets: [{
                         label: '채팅 빈도',
                         data: hourCounts,
@@ -162,10 +172,10 @@
             });
         }
 
-        document.getElementById('fileInput').addEventListener('change', function(e) {
+        document.getElementById('fileInput').addEventListener('change', function (e) {
             const file = e.target.files[0];
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 chatData = parseChatData(e.target.result);
                 const ranking = analyzeChatRanking(chatData);
                 displayRankingChart(ranking);
@@ -184,4 +194,5 @@
         }
     </script>
 </body>
+
 </html>
