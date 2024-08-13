@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>카카오톡 채팅 분석 도구</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        input, button {
+            margin: 10px 0;
+            padding: 5px;
+        }
+        #rankingChart, #timeChart {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>채팅 분석 도구</h1>
+    
+    <h2>채팅 로그 업로드</h2>
+    <input type="file" id="fileInput" accept=".txt">
+    
+    <h2>닉네임 분석</h2>
+    <input type="text" id="nicknameInput" placeholder="닉네임 입력">
+    <button onclick="analyzeNickname()">분석</button>
+    
+    <div>
+        <canvas id="rankingChart"></canvas>
+    </div>
+    <div>
+        <canvas id="timeChart"></canvas>
+    </div>
+
+    <script>
+        let chatData = [];
+
+        function parseChatData(text) {
+            const lines = text.split('\n');
+            const regex = /\[(.+?)\] \[(.+?)\] (.+)/;
+            return lines.map(line => {
+                const match = line.trim().match(regex);
+                if (match) {
+                    const [, nickname, time, message] = match;
+                    return { nickname, time, message };
+                }
+                return null;
+            }).filter(entry => entry !== null);
+        }
+
+        function analyzeChatRanking(data) {
+            const counts = {};
+            data.forEach(entry => {
+                counts[entry.nickname] = (counts[entry.nickname] || 0) + 1;
+            });
+            return Object.entries(counts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 20);
+        }
+
+        function analyzeChatTimes(data, targetNickname) {
+            const hourCounts = Array(24).fill(0);
+            data.forEach(entry => {
+                if (entry.nickname === targetNickname) {
+                    let hour = parseInt(entry.time.split(':')[0]);
+                    if (entry.time.includes('오후') && hour !== 12) hour += 12;
+                    if (entry.time.includes('오전') && hour === 12) hour = 0;
+                    hourCounts[hour]++;
+                }
+            });
+            return hourCounts;
+        }
+
+        function displayRankingChart(ranking) {
+            const ctx = document.getElementById('rankingChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ranking.map(r => r[0]),
+                    datasets: [{
+                        label: '메시지 수',
+                        data: ranking.map(r => r[1]),
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '채팅 참여자 순위'
+                        },
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '메시지 수'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '닉네임'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayTimeChart(hourCounts, nickname) {
+            const ctx = document.getElementById('timeChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => i),
+                    datasets: [{
+                        label: '채팅 빈도',
+                        data: hourCounts,
+                        backgroundColor: 'rgba(153, 102, 255, 0.6)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `${nickname}의 채팅 시간대 분포`
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '채팅 빈도'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '시간'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                chatData = parseChatData(e.target.result);
+                const ranking = analyzeChatRanking(chatData);
+                displayRankingChart(ranking);
+            };
+            reader.readAsText(file, 'UTF-8');
+        });
+
+        function analyzeNickname() {
+            const nickname = document.getElementById('nicknameInput').value;
+            if (nickname && chatData.length > 0) {
+                const hourCounts = analyzeChatTimes(chatData, nickname);
+                displayTimeChart(hourCounts, nickname);
+            } else {
+                alert('먼저 채팅 로그를 업로드하고 닉네임을 입력해주세요.');
+            }
+        }
+    </script>
+</body>
+</html>
