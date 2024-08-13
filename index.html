@@ -82,7 +82,7 @@
         function analyzeChatTimes(data, targetNickname) {
             const hourCounts = Array(24).fill(0);
             data.forEach(entry => {
-                if (entry.nickname === targetNickname) {
+                if (targetNickname === "" || entry.nickname === targetNickname) {
                     let hour = 0;
                     if (entry.time.includes('오후') && hour !== 12) hour += 12;
                     if (entry.time.includes('오전') && hour === 12) hour = 0;
@@ -148,6 +148,10 @@
 
         let timeChart = null;
         function displayTimeChart(hourCounts, nickname) {
+            let nicknameVisual = nickname
+            if (nickname == "") {
+                nicknameVisual = "모두";
+            }
             const ctx = document.getElementById('timeChart').getContext('2d');
             if (timeChart) {
                 timeChart.destroy();
@@ -167,7 +171,7 @@
                     plugins: {
                         title: {
                             display: true,
-                            text: `${nickname}의 채팅 시간대 분포`
+                            text: `${nicknameVisual}의 채팅 시간대 분포`
                         }
                     },
                     scales: {
@@ -196,6 +200,7 @@
                 chatData = parseChatData(e.target.result);
                 const ranking = analyzeChatRanking(chatData);
                 displayRankingChart(ranking);
+                analyzeNicknameWithLabel("");
             };
             reader.readAsText(file, 'UTF-8');
         });
@@ -208,11 +213,9 @@
 
         function analyzeNickname() {
             const nickname = document.getElementById('nicknameInput').value;
-            if (nickname && chatData.length > 0) {
+            if (chatData.length > 0) {
                 const hourCounts = analyzeChatTimes(chatData, nickname);
                 displayTimeChart(hourCounts, nickname);
-            } else {
-                alert('먼저 채팅 로그를 업로드하고 닉네임을 입력해주세요.');
             }
         }
     </script>
