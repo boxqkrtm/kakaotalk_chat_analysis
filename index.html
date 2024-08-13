@@ -39,16 +39,19 @@
     <h2>채팅 로그 업로드</h2>
     <input type="file" id="fileInput" accept=".txt">
 
+    <div>
+        <canvas id="rankingChart"></canvas>
+    </div>
+    <p>랭킹 그래프 선택시 닉네임 분석으로 넘어갑니다.</p>
+
+    <div>
+        <canvas id="timeChart"></canvas>
+    </div>
+
     <h2>닉네임 분석</h2>
     <input type="text" id="nicknameInput" placeholder="닉네임 입력">
     <button onclick="analyzeNickname()">분석</button>
 
-    <div>
-        <canvas id="rankingChart"></canvas>
-    </div>
-    <div>
-        <canvas id="timeChart"></canvas>
-    </div>
 
     <script>
         let chatData = [];
@@ -84,16 +87,19 @@
                     if (entry.time.includes('오후') && hour !== 12) hour += 12;
                     if (entry.time.includes('오전') && hour === 12) hour = 0;
                     hour += parseInt(entry.time.split(':')[0].replace("오전 ", "").replace("오후 ", ""));
-                    hourCounts[hour]++;
+                    hourCounts[hour % 24]++;
                 }
             });
-            console.log(hourCounts);
             return hourCounts;
         }
 
+        let rankingChart = null;
         function displayRankingChart(ranking) {
+            if (rankingChart) {
+                rankingChart.destroy();
+            }
             const ctx = document.getElementById('rankingChart').getContext('2d');
-            new Chart(ctx, {
+            rankingChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: ranking.map(r => r[0]),
@@ -128,14 +134,25 @@
                                 text: '닉네임'
                             }
                         }
+                    },
+                    onClick: (e, elements) => {
+                        if (elements.length > 0) {
+                            const chartElement = elements[0];
+                            const index = chartElement.index;
+                            analyzeNicknameWithLabel(ranking[index][0]);
+                        }
                     }
                 }
             });
         }
 
+        let timeChart = null;
         function displayTimeChart(hourCounts, nickname) {
             const ctx = document.getElementById('timeChart').getContext('2d');
-            new Chart(ctx, {
+            if (timeChart) {
+                timeChart.destroy();
+            }
+            timeChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: Array.from({ length: 24 }, (_, i) => i),
@@ -182,6 +199,12 @@
             };
             reader.readAsText(file, 'UTF-8');
         });
+
+        function analyzeNicknameWithLabel(label) {
+            const nicknameInput = document.getElementById('nicknameInput');
+            nicknameInput.value = label;
+            analyzeNickname();
+        }
 
         function analyzeNickname() {
             const nickname = document.getElementById('nicknameInput').value;
